@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>肌肉扰动治疗推理系统 · MVP</title>
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">肌</span>
+      <div>
+        <h1>肌肉扰动治疗推理系统</h1>
+        <p class="subtitle">查体输入 → 整体推理：连带受累 · 干预靶点 · 治疗方案 · 动作影响</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="/atlas">← 返回临床康复图谱</a>
+      <span class="badge">扰动推理 · 种子数据</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左侧：查体输入 -->
+    <section class="panel input-panel">
+      <h2 class="panel-title">① 查体输入</h2>
+
+      <div class="field">
+        <label>问题肌肉 <small>（查体发现的紧张/激痛/无力肌肉，可多选）</small></label>
+        <input type="search" id="muscle-search" class="search" placeholder="搜索肌肉名称…" />
+        <div id="muscle-groups" class="checkbox-groups"></div>
+      </div>
+
+      <div class="field">
+        <label>疼痛位置 <small>（按部位反查责任肌肉，可多选）</small></label>
+        <div id="pain-groups" class="checkbox-groups"></div>
+      </div>
+
+      <div class="actions">
+        <button id="analyze-btn" class="btn-primary">开始推理</button>
+        <button id="reset-btn" class="btn-ghost">清空</button>
+      </div>
+      <p id="input-hint" class="hint">提示：至少选择 1 块问题肌肉或 1 个疼痛位置。</p>
+    </section>
+
+    <!-- 右侧：推理结果 -->
+    <section class="panel result-panel">
+      <h2 class="panel-title">② 推理结果</h2>
+      <div id="results" class="results">
+        <div class="empty-state">
+          <p>在左侧录入查体信息后点击「开始推理」。</p>
+          <p class="muted">系统将从整体角度分析连带肌肉、干预优先级、治疗方法与动作影响。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <strong>免责声明：</strong>本工具基于通用解剖学/康复经验整理的种子数据，仅供专业人员临床辅助参考，
+    不替代医学诊断与个体化评估。使用前请由专业人员核对数据准确性，并结合红旗征筛查与影像/实验室检查综合判断。
+  </footer>
+
+  <script type="module" src="./src/ui/app.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ import { useUIStore } from "./shared/stores/useUIStore";
 import { AtlasPage } from "./modes/atlas/AtlasPage";
 import { TreatmentPage } from "./modes/treatment/TreatmentPage";
 import { SearchBar } from "./shared/components/SearchBar/SearchBar";
-import { Activity, Stethoscope } from "lucide-react";
+import { Activity, Stethoscope, Zap } from "lucide-react";
 
 const ModeSync: React.FC = () => {
   const { mode, setMode } = useUIStore();
@@ -68,6 +68,14 @@ const App: React.FC = () => {
               <Stethoscope size={14} />
               治疗模式
             </button>
+            <a
+              href="/perturbation/index.html"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700"
+              title="扰动推理：连带受累 · 干预靶点 · 姿势失衡 · 动作影响"
+            >
+              <Zap size={14} />
+              扰动推理
+            </a>
           </div>
 
           <div className="flex-1 max-w-md ml-4">
