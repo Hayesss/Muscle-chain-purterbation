@@ -64,14 +64,80 @@ function getSelected(name) {
   return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value);
 }
 
-/* ---------------- 渲染结果 ---------------- */
+/* ---------------- 渲染结果（四分面 Tab 翻页） ---------------- */
+const FACET_LABELS = ['连带受累肌肉预测', '干预优先级', '整体姿势 / 失衡', '动作影响'];
+
 function render(result) {
   const root = $('#results');
   root.innerHTML = '';
-  root.appendChild(renderRelated(result.relatedMuscles, result.painImplicated));
-  root.appendChild(renderPriority(result.priorityTargets));
-  root.appendChild(renderSyndromes(result.syndromeMatches));
-  root.appendChild(renderMovements(result.movementImpact));
+
+  const sections = [
+    renderRelated(result.relatedMuscles, result.painImplicated),
+    renderPriority(result.priorityTargets),
+    renderSyndromes(result.syndromeMatches),
+    renderMovements(result.movementImpact),
+  ];
+  const counts = [
+    result.relatedMuscles.length,
+    result.priorityTargets.length,
+    result.syndromeMatches.length,
+    result.movementImpact.length,
+  ];
+
+  const tabs = document.createElement('div');
+  tabs.className = 'result-tabs';
+  tabs.setAttribute('role', 'tablist');
+
+  const facets = document.createElement('div');
+  facets.className = 'result-facets';
+
+  const activate = (idx) => {
+    tabs.querySelectorAll('.result-tab').forEach((t, i) => {
+      const on = i === idx;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+    });
+    const panes = facets.querySelectorAll('.result-facet');
+    panes.forEach((p, i) => p.classList.toggle('active', i === idx));
+    const active = panes[idx];
+    if (active) {
+      active.style.animation = 'none';
+      void active.offsetWidth;
+      active.style.animation = '';
+    }
+  };
+
+  sections.forEach((sec, i) => {
+    const pane = document.createElement('div');
+    pane.className = 'result-facet' + (i === 0 ? ' active' : '');
+    pane.id = `facet-${i}`;
+    pane.setAttribute('role', 'tabpanel');
+    pane.appendChild(sec);
+    facets.appendChild(pane);
+
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'result-tab' + (i === 0 ? ' active' : '');
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    tab.tabIndex = i === 0 ? 0 : -1;
+    tab.innerHTML = `<span class="rt-label">${FACET_LABELS[i]}</span>` +
+      `<span class="rt-count">${counts[i]}</span>`;
+    tab.addEventListener('click', () => activate(i));
+    tab.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      const next = (i + dir + sections.length) % sections.length;
+      activate(next);
+      tabs.querySelectorAll('.result-tab')[next].focus();
+    });
+    tabs.appendChild(tab);
+  });
+
+  root.appendChild(tabs);
+  root.appendChild(facets);
   root.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
