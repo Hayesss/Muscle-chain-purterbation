@@ -3,8 +3,9 @@
  * 纯原生 ES Module，无构建步骤。
  */
 import { muscles, muscleById, regions } from '../data/muscles.js';
-import { painLocations } from '../data/painPatterns.js';
+import { painLocations, painLocationById } from '../data/painPatterns.js';
 import { analyze, muscleName } from '../engine/reasoning.js';
+import { bodyViews, bodyHotspots, buildSilhouette, BODY_VIEWBOX } from '../data/bodyMap.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -62,6 +63,113 @@ function buildPainCheckboxes() {
 
 function getSelected(name) {
   return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value);
+}
+
+/* ---------------- 可点击人体图 ---------------- */
+function buildBodyMap() {
+  const root = $('#body-map');
+  if (!root) return;
+  const [vw, vh] = BODY_VIEWBOX;
+
+  const views = bodyViews
+    .map((v) => {
+      const spots = bodyHotspots
+        .filter((h) => h.view === v.id)
+        .map((h) => {
+          const loc = painLocationById[h.painId];
+          const label = loc ? loc.name.zh : h.painId;
+          const left = (h.x / vw) * 100;
+          const top = (h.y / vh) * 100;
+          return `<button type="button" class="hotspot" data-pain-id="${h.painId}"
+            style="left:${left}%;top:${top}%" aria-pressed="false"
+            aria-label="标记疼痛部位：${label}" title="${label}"><span class="hs-dot"></span></button>`;
+        })
+        .join('');
+      return `<div class="bodymap-view${v.id === 'front' ? ' active' : ''}" data-view="${v.id}">
+        <svg class="bodymap-svg" viewBox="0 0 ${vw} ${vh}" aria-hidden="true">${buildSilhouette(v.id)}</svg>
+        ${spots}
+      </div>`;
+    })
+    .join('');
+
+  root.innerHTML = `
+    <div class="bodymap-views" role="tablist" aria-label="人体视图切换">
+      ${bodyViews
+        .map(
+          (v, i) =>
+            `<button type="button" class="bodymap-view-btn${i === 0 ? ' active' : ''}" data-view="${v.id}" role="tab" aria-selected="${i === 0 ? 'true' : 'false'}">${v.label}</button>`
+        )
+        .join('')}
+    </div>
+    <div class="bodymap-stage">${views}</div>
+    <div class="bodymap-preview" id="bodymap-preview"></div>`;
+
+  root.querySelectorAll('.bodymap-view-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      root.querySelectorAll('.bodymap-view-btn').forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      root.querySelectorAll('.bodymap-view').forEach((v) =>
+        v.classList.toggle('active', v.dataset.view === view)
+      );
+    });
+  });
+
+  root.querySelectorAll('.hotspot').forEach((hs) => {
+    hs.addEventListener('click', () => togglePain(hs.dataset.painId));
+  });
+
+  syncBodyMap();
+}
+
+function togglePain(painId) {
+  const cb = document.querySelector(`input[name="pain"][value="${painId}"]`);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  syncBodyMap();
+}
+
+/** 依据 pain 复选框状态，同步热点高亮与候选肌肉预览 */
+function syncBodyMap() {
+  const selected = new Set(getSelected('pain'));
+  document.querySelectorAll('#body-map .hotspot').forEach((hs) => {
+    const on = selected.has(hs.dataset.painId);
+    hs.classList.toggle('selected', on);
+    hs.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  renderBodyPreview([...selected]);
+}
+
+function renderBodyPreview(painIds) {
+  const el = $('#bodymap-preview');
+  if (!el) return;
+  if (!painIds.length) {
+    el.innerHTML =
+      '<p class="bodymap-hint">点击人体图上的圆点标记痛处，系统会即时列出该部位可能的责任肌肉；可多选。</p>';
+    return;
+  }
+  const rows = painIds
+    .map((pid) => {
+      const loc = painLocationById[pid];
+      if (!loc) return '';
+      const names = loc.candidateMuscles.map((mid) => muscleName(mid)).join('、');
+      return `<div class="bp-row">
+        <button type="button" class="bp-remove" data-pain-id="${pid}" aria-label="取消标记 ${loc.name.zh}">×</button>
+        <div class="bp-body">
+          <span class="bp-loc">${loc.name.zh}</span>
+          <span class="bp-arrow">→</span>
+          <span class="bp-muscles">${names}</span>
+        </div>
+      </div>`;
+    })
+    .join('');
+  el.innerHTML = `<div class="bp-title">已标记 ${painIds.length} 处 · 候选责任肌肉</div>${rows}`;
+  el.querySelectorAll('.bp-remove').forEach((b) =>
+    b.addEventListener('click', () => togglePain(b.dataset.painId))
+  );
 }
 
 /* ---------------- 渲染结果（四分面 Tab 翻页） ---------------- */
@@ -314,6 +422,7 @@ function onReset() {
   document.querySelectorAll('input[type="checkbox"]').forEach((c) => (c.checked = false));
   $('#muscle-search').value = '';
   document.querySelectorAll('#muscle-groups .cb-item').forEach((el) => el.classList.remove('hidden'));
+  syncBodyMap();
   $('#results').innerHTML =
     '<div class="empty-state"><p>在左侧录入查体信息后点击「开始推理」。</p>' +
     '<p class="muted">系统将从整体角度分析连带肌肉、干预优先级、治疗方法与动作影响。</p></div>';
@@ -329,9 +438,12 @@ function onSearch(e) {
 function init() {
   buildMuscleCheckboxes();
   buildPainCheckboxes();
+  buildBodyMap();
   $('#analyze-btn').addEventListener('click', onAnalyze);
   $('#reset-btn').addEventListener('click', onReset);
   $('#muscle-search').addEventListener('input', onSearch);
+  // 列表勾选与人体图热点双向同步
+  $('#pain-groups').addEventListener('change', syncBodyMap);
 }
 
 document.addEventListener('DOMContentLoaded', init);

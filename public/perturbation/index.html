@@ -33,8 +33,12 @@
       </div>
 
       <div class="field">
-        <label>疼痛位置 <small>（按部位反查责任肌肉，可多选）</small></label>
-        <div id="pain-groups" class="checkbox-groups"></div>
+        <label>疼痛位置 <small>（点击人体图标记患者主诉痛处，可多选）</small></label>
+        <div id="body-map" class="bodymap"></div>
+        <details class="pain-fallback">
+          <summary>或从列表选择疼痛部位</summary>
+          <div id="pain-groups" class="checkbox-groups"></div>
+        </details>
       </div>
 
       <div class="actions">
